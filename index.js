@@ -3,6 +3,7 @@ import "./db.js";
 import bodyParser from "body-parser";
 import User from "./models/User.js";
 import cookieParser from "cookie-parser";
+import auth from "./middleware/auth.js";
 const app = express();
 const PORT = 8000;
 
@@ -14,7 +15,7 @@ app.use(bodyParser.json());
 app.use(cookieParser());
 app.get("/", (req, res) => res.send("Hello World"));
 
-app.post("/register", (req, res) => {
+app.post("/api/users/register", (req, res) => {
   //회원가입 필요한 정보들을 client에서 가져오면
   // 그것들을 데이터베이스에 넣어준다.
   const user = new User(req.body);
@@ -27,7 +28,7 @@ app.post("/register", (req, res) => {
     });
   });
 });
-app.post("/login", (req, res) => {
+app.post("/api/users/login", (req, res) => {
   //요청된 이메일을 DB에서 찾는다.
   User.findOne({ email: req.body.email }, (err, user) => {
     if (!user) {
@@ -55,6 +56,35 @@ app.post("/login", (req, res) => {
           .status(200)
           .json({ loginSuccess: true, userId: user._id });
       });
+    });
+  });
+});
+app.get("/api/users/auth", auth, (req, res) => {
+  const {
+    user: { _id, email, name, lastname, image, role },
+  } = req;
+  res.status(200).json({
+    _id,
+    isAdmin: role === 0 ? false : true,
+    isAuth: true,
+    email,
+    name,
+    lastname,
+    image,
+  });
+});
+
+app.get("/api/users/logout", auth, (req, res) => {
+  const {
+    user: { _id },
+  } = req;
+  console.log(_id);
+  User.findOneAndUpdate({ _id }, { token: "" }, (err, user) => {
+    if (err) {
+      return res.json({ success: false, err });
+    }
+    return res.status(200).send({
+      success: true,
     });
   });
 });
